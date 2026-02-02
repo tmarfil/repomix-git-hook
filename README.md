@@ -13,18 +13,38 @@ On every `git push`:
 
 ## Prerequisites
 
+- [Node.js](https://nodejs.org/) (>= 18)
 - [repomix](https://github.com/yamadashy/repomix) (`npm i -g repomix`)
 - [GitHub CLI](https://cli.github.com/) (`gh`), authenticated via `gh auth login`
-- Node.js (required by repomix)
 
 ## Install
 
+### Manual install (no clone required)
+
+Copy the hook directly into any repo:
+
 ```sh
-git clone <this-repo> && cd repomix-git-hook
+curl -fsSL https://raw.githubusercontent.com/tmarfil/repomix-git-hook/main/pre-push \
+  -o "$(git rev-parse --show-toplevel)/.git/hooks/pre-push" \
+  && chmod +x "$(git rev-parse --show-toplevel)/.git/hooks/pre-push" \
+  && grep -qxF 'repomix.xml' "$(git rev-parse --show-toplevel)/.gitignore" 2>/dev/null \
+  || echo 'repomix.xml' >> "$(git rev-parse --show-toplevel)/.gitignore"
+```
+
+### Using install.sh
+
+```sh
+git clone https://github.com/tmarfil/repomix-git-hook && cd repomix-git-hook
 ./install.sh /path/to/your/repo
 ```
 
 `install.sh` copies `pre-push` into the target repo's `.git/hooks/` and adds `repomix.xml` to its `.gitignore`. Run without arguments to install in the current directory.
+
+Pass `-f` or `--force` to skip the overwrite prompt (useful for scripted/non-interactive installs):
+
+```sh
+./install.sh --force /path/to/your/repo
+```
 
 ## Files
 

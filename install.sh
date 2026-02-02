@@ -1,19 +1,29 @@
 #!/usr/bin/env bash
 # Install the repomix pre-push hook into a git repository.
-# Usage: ./install.sh [/path/to/repo]  (defaults to current directory)
+# Usage: ./install.sh [-f|--force] [/path/to/repo]  (defaults to current directory)
 
 set -e
 
-TARGET="${1:-.}"
+FORCE=0
+TARGET=""
+
+for arg in "$@"; do
+  case "$arg" in
+    -f|--force) FORCE=1 ;;
+    *) TARGET="$arg" ;;
+  esac
+done
+
+TARGET="${TARGET:-.}"
 TARGET="$(cd "$TARGET" && git rev-parse --show-toplevel 2>/dev/null)" || {
-  echo "Error: '$1' is not inside a git repository." >&2
+  echo "Error: '${TARGET}' is not inside a git repository." >&2
   exit 1
 }
 
 HOOK_SRC="$(cd "$(dirname "$0")" && pwd)/pre-push"
 HOOK_DST="$TARGET/.git/hooks/pre-push"
 
-if [ -f "$HOOK_DST" ]; then
+if [ -f "$HOOK_DST" ] && [ "$FORCE" -eq 0 ]; then
   echo "A pre-push hook already exists at $HOOK_DST"
   printf 'Overwrite? [y/N] '
   read -r ans
