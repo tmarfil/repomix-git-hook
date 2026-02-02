@@ -44,7 +44,7 @@ if [ -f repomix.url ]; then
 fi
 
 if [ -z "$GIST_URL" ]; then
-  GIST_URL="$(gh gist create --secret --desc "$REPO_NAME" repomix.xml 2>/dev/null)"
+  GIST_URL="$(gh gist create --desc "$REPO_NAME" repomix.xml 2>/dev/null)"
   [ -n "$GIST_URL" ] && echo "repomix-hook: gist created."
 fi
 
