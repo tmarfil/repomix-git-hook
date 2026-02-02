@@ -1,0 +1,70 @@
+#!/usr/bin/env bash
+# pre-push hook: pack repo with repomix, sync to a secret GitHub gist,
+# and track the gist URL in repomix.url.
+
+# Prevent recursion when this hook pushes repomix.url
+[ -n "$REPOMIX_PUSHING" ] && exit 0
+
+REMOTE="$1"
+REPO_ROOT="$(git rev-parse --show-toplevel)"
+REPO_NAME="$(basename "$REPO_ROOT")"
+BRANCH="$(git rev-parse --abbrev-ref HEAD)"
+
+cd "$REPO_ROOT" || exit 0
+
+# --- dependency checks ---
+for cmd in repomix gh node; do
+  command -v "$cmd" >/dev/null 2>&1 || { echo "repomix-hook: '$cmd' not found, skipping gist sync."; exit 0; }
+done
+
+# --- generate repomix output ---
+echo "repomix-hook: packing repository..."
+repomix --output repomix.xml --quiet 2>/dev/null || repomix --output repomix.xml
+[ -f repomix.xml ] || { echo "repomix-hook: repomix.xml not generated."; exit 0; }
+
+# --- helper: update an existing gist via the API ---
+update_gist() {
+  node -e "
+    var fs = require('fs');
+    var c  = fs.readFileSync(process.argv[1], 'utf8');
+    process.stdout.write(JSON.stringify({ files: { 'repomix.xml': { content: c } } }));
+  " "$1" | gh api --method PATCH "/gists/$2" --input - --jq '.html_url' 2>/dev/null
+}
+
+# --- create or update gist ---
+GIST_URL=""
+
+if [ -f repomix.url ]; then
+  EXISTING_URL="$(tr -d '[:space:]' < repomix.url)"
+  GIST_ID="${EXISTING_URL##*/}"
+  if [ -n "$GIST_ID" ]; then
+    GIST_URL="$(update_gist repomix.xml "$GIST_ID")"
+    [ -n "$GIST_URL" ] && echo "repomix-hook: gist updated."
+  fi
+fi
+
+if [ -z "$GIST_URL" ]; then
+  GIST_URL="$(gh gist create --secret --desc "$REPO_NAME" repomix.xml 2>/dev/null)"
+  [ -n "$GIST_URL" ] && echo "repomix-hook: gist created."
+fi
+
+rm -f repomix.xml
+
+if [ -z "$GIST_URL" ]; then
+  echo "repomix-hook: failed to create/update gist."
+  exit 0
+fi
+
+# --- persist gist URL if it changed ---
+CURRENT_URL=""
+[ -f repomix.url ] && CURRENT_URL="$(tr -d '[:space:]' < repomix.url)"
+
+if [ "$CURRENT_URL" != "$GIST_URL" ]; then
+  printf '%s\n' "$GIST_URL" > repomix.url
+  git add repomix.url
+  git commit -m "Update repomix gist URL"
+  echo "repomix-hook: pushing repomix.url..."
+  REPOMIX_PUSHING=1 git push "$REMOTE" "$BRANCH"
+fi
+
+exit 0
