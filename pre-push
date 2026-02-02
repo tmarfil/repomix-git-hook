@@ -2,13 +2,8 @@
 # pre-push hook: pack repo with repomix, sync to a secret GitHub gist,
 # and track the gist URL in repomix.url.
 
-# Prevent recursion when this hook pushes repomix.url
-[ -n "$REPOMIX_PUSHING" ] && exit 0
-
-REMOTE="$1"
 REPO_ROOT="$(git rev-parse --show-toplevel)"
 REPO_NAME="$(basename "$REPO_ROOT")"
-BRANCH="$(git rev-parse --abbrev-ref HEAD)"
 
 cd "$REPO_ROOT" || exit 0
 
@@ -63,8 +58,7 @@ if [ "$CURRENT_URL" != "$GIST_URL" ]; then
   printf '%s\n' "$GIST_URL" > repomix.url
   git add repomix.url
   git commit -m "Update repomix gist URL"
-  echo "repomix-hook: pushing repomix.url..."
-  REPOMIX_PUSHING=1 git push "$REMOTE" "$BRANCH"
+  echo "repomix-hook: committed repomix.url (included in next push)"
 fi
 
 exit 0

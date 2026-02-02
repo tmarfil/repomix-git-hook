@@ -8,7 +8,7 @@ On every `git push`:
 
 1. Runs `repomix` to produce `repomix.xml` (a single-file representation of the repo).
 2. Creates a **secret** GitHub gist named after the repository, or updates the existing one.
-3. Writes the gist URL to `repomix.url`. If that file is new or the URL changed, it commits and pushes the update automatically.
+3. Writes the gist URL to `repomix.url`. If that file is new or the URL changed, it commits the update. The commit is included in the next push.
 4. Removes the local `repomix.xml` after upload.
 
 ## Prerequisites
@@ -37,4 +37,3 @@ git clone <this-repo> && cd repomix-git-hook
 
 - The hook exits cleanly (exit 0) if any dependency is missing, so it never blocks a push.
 - Bash and zsh compatible (`#!/usr/bin/env bash`).
-- A `REPOMIX_PUSHING` environment variable guards against infinite recursion when the hook pushes the `repomix.url` commit.
